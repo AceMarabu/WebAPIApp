@@ -42,15 +42,24 @@ namespace WebAPIApp.Controllers
 			return new ObjectResult(user);
 		}
 
+
 		// POST api/users
 		[HttpPost]
 		public async Task<ActionResult<User>> Post(User user)
 		{
-			if (user == null)
-			{
-				return BadRequest();
-			}
+			// обработка частных случаев валидации
+			if (user.Age >= 99)
+				ModelState.AddModelError("Age", "Возраст не должен быть равен 99");
 
+			if (user.Name == "admin")
+			{
+				ModelState.AddModelError("Name", "Недопустимое имя пользователя - admin");
+			}
+			// если есть ошибки - возвращаем ошибку 400
+			if (!ModelState.IsValid)
+				return BadRequest(ModelState);
+
+			// если ошибок нет, сохраняем в базу данных
 			db.Users.Add(user);
 			await db.SaveChangesAsync();
 			return Ok(user);
@@ -60,10 +69,14 @@ namespace WebAPIApp.Controllers
 		[HttpPut]
 		public async Task<ActionResult<User>> Put(User user)
 		{
+			if (!ModelState.IsValid)
+				return BadRequest(ModelState);
+
 			if (user == null)
 			{
 				return BadRequest();
 			}
+
 			if (!db.Users.Any(x => x.Id == user.Id))
 			{
 				return NotFound();
@@ -79,6 +92,9 @@ namespace WebAPIApp.Controllers
 		public async Task<ActionResult<User>> Delete(int id)
 		{
 			User user = db.Users.FirstOrDefault(x => x.Id == id);
+			if (!ModelState.IsValid)
+				return BadRequest(ModelState);
+
 			if (user == null)
 			{
 				return NotFound();
@@ -86,6 +102,8 @@ namespace WebAPIApp.Controllers
 			db.Users.Remove(user);
 			await db.SaveChangesAsync();
 			return Ok(user);
+
+
 		}
 	}
 }
